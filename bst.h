@@ -260,11 +260,46 @@ BST <T> ::BST() : numElements(0), root(nullptr)
  * Copy one tree to another
  ********************************************/
 template <typename T>
-BST <T> :: BST ( const BST<T>& rhs) : numElements(rhs.numElements), root(nullptr)
+BST<T>::BST(const BST<T>& rhs) : numElements(0), root(nullptr)
 {
-   numElements = 99;
-   root = new BNode;
-   //TODO: Still need to implement the copy constructor
+    if (this != &rhs)
+    {
+        numElements = rhs.numElements;
+        // skip the copy if the rhs is empty
+        if (rhs.root)
+        {
+            // set this ->root to a new BNode with the data of rhs.root
+            root = new BNode(rhs.root->data);
+
+            // Recursively copy left and right subtrees using a lambda function or inline function, like in javascript
+            // maybe a better way to do this??
+            std::function<void(BNode*, BNode*)> tempCopyFunc = [&](BNode* src, BNode* dest) {
+                // Copy left stuff to the new node
+                if (src->pLeft)
+                {
+                    dest->pLeft = new BNode(src->pLeft->data);
+                    dest->pLeft->pParent = dest;
+                    tempCopyFunc(src->pLeft, dest->pLeft);
+                }
+
+                // Copy right stuff also to the new node
+                if (src->pRight)
+                {
+                    dest->pRight = new BNode(src->pRight->data);
+                    dest->pRight->pParent = dest;
+                    tempCopyFunc(src->pRight, dest->pRight);
+                }
+                };
+
+            // Let the O(n) copying begin
+            tempCopyFunc(rhs.root, root);
+        }
+        else
+        {
+            // If the code made it here with out crashing... awesome! then root is null
+            root = nullptr;
+        }
+    }
 }
 
 /*********************************************
@@ -426,7 +461,19 @@ typename BST <T> ::iterator BST <T> :: erase(iterator & it)
 template <typename T>
 void BST <T> ::clear() noexcept
 {
+	// recursivly go down the rabit hole of the tree, once it hits the bottom will delete the nodes on the way back up
+    std::function<void(BNode*)> deleteNodes = [&](BNode* node) {
+        if (node) {
+            deleteNodes(node->pLeft);
+            deleteNodes(node->pRight);
+            delete node;
+        }
+        };
 
+	// use lambda function to delete all the nodes then reset the root and numElements
+    deleteNodes(root);
+    root = nullptr;
+    numElements = 0;
 }
 
 /*****************************************************
