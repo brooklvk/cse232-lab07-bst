@@ -14,7 +14,7 @@
  *        BST                 : A class that represents a binary search tree
  *        BST::iterator       : An iterator through BST
  * Author
- *    <your names here>
+ *    Joshua Sooaemalelagi & Brooklyn Sowards
  ************************************************************************/
 
 #pragma once
@@ -114,8 +114,8 @@ public:
    // Status
    //
 
-   bool   empty() const noexcept { return true; }
-   size_t size()  const noexcept { return 99;   }
+   bool empty() const noexcept { return numElements == 0; } //Checking if the tree is empty now
+   size_t size() const noexcept { return numElements; } //Returning the number of elements now
    
 
 private:
@@ -138,18 +138,9 @@ public:
    // 
    // Construct
    //
-   BNode()
-   {
-      pLeft = pRight = this;
-   }
-   BNode(const T &  t) 
-   {
-      pLeft = pRight = this; 
-   }
-   BNode(T && t) 
-   {  
-      pLeft = pRight = this;
-   }
+   BNode() : data(T()), pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true) {}
+   BNode(const T &  t) : data(t), pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true) {}
+   BNode(T&& t) : data(std::move(t)), pLeft(nullptr), pRight(nullptr), pParent(nullptr), isRed(true) {}  //Corrected Constructors
 
    //
    // Insert
@@ -164,8 +155,8 @@ public:
    // 
    // Status
    //
-   bool isRightChild(BNode * pNode) const { return true; }
-   bool isLeftChild( BNode * pNode) const { return true; }
+   bool isRightChild() const { return pParent && pParent->pRight == this; }
+   bool isLeftChild() const { return pParent && pParent->pLeft == this; }  //Now returning actuall statuses
 
    //
    // Data
@@ -195,31 +186,32 @@ class BST <T> :: iterator
    friend class set; 
 public:
    // constructors and assignment
-   iterator(BNode * p = nullptr)          
+   iterator(BNode * p = nullptr) : pNode(p)
    { 
    }
-   iterator(const iterator & rhs)         
+   iterator(const iterator & rhs) : pNode(rhs.pNode)
    { 
    }
    iterator & operator = (const iterator & rhs)
    {
-      return *this;
+       pNode = rhs.pNode;
+       return *this;
    }
 
    // compare
    bool operator == (const iterator & rhs) const
    {
-      return true;
+       return pNode == rhs.pNode;
    }
    bool operator != (const iterator & rhs) const
    {
-      return true;
+       return pNode != rhs.pNode;
    }
 
    // de-reference. Cannot change because it will invalidate the BST
    const T & operator * () const 
    {
-      return *(new T);
+       return pNode->data;
    }
 
    // increment and decrement
@@ -257,10 +249,10 @@ private:
   * BST :: DEFAULT CONSTRUCTOR
   ********************************************/
 template <typename T>
-BST <T> ::BST()
+BST <T> ::BST() : numElements(0), root(nullptr)
 {
-   numElements = 99;
-   root = new BNode;
+   //numElements = 99;
+   //root = new BNode;
 }
 
 /*********************************************
@@ -268,10 +260,11 @@ BST <T> ::BST()
  * Copy one tree to another
  ********************************************/
 template <typename T>
-BST <T> :: BST ( const BST<T>& rhs) 
+BST <T> :: BST ( const BST<T>& rhs) : numElements(rhs.numElements), root(nullptr)
 {
    numElements = 99;
    root = new BNode;
+   //TODO: Still need to implement the copy constructor
 }
 
 /*********************************************
@@ -279,10 +272,10 @@ BST <T> :: BST ( const BST<T>& rhs)
  * Move one tree to another
  ********************************************/
 template <typename T>
-BST <T> :: BST(BST <T> && rhs) 
+BST <T> :: BST(BST <T> && rhs) : numElements(rhs.numElements), root(rhs.root)
 {
-   numElements = 99;
-   root = new BNode;
+    rhs.root = nullptr;
+    rhs.numElements = 0;
 }
 
 /*********************************************
@@ -290,10 +283,10 @@ BST <T> :: BST(BST <T> && rhs)
  * Create a BST from an initializer list
  ********************************************/
 template <typename T>
-BST <T> ::BST(const std::initializer_list<T>& il)
+BST <T> ::BST(const std::initializer_list<T>& il) : numElements(0), root(nullptr)
 {
-   numElements = 99;
-   root = new BNode;
+   for (const T& item : il)
+      insert(item);
 }
 
 /*********************************************
@@ -302,7 +295,8 @@ BST <T> ::BST(const std::initializer_list<T>& il)
 template <typename T>
 BST <T> :: ~BST()
 {
-
+    clear();
+	//TODO: Clear() still needs to be implemented
 }
 
 
@@ -313,7 +307,45 @@ BST <T> :: ~BST()
 template <typename T>
 BST <T> & BST <T> :: operator = (const BST <T> & rhs)
 {
-   return *this;
+    if (this != &rhs)
+    {
+        numElements = rhs.numElements;
+		// skip the copy if the rhs is empty
+        if (rhs.root)
+        {
+			// set this ->root to a new BNode with the data of rhs.root
+            root = new BNode(rhs.root->data);
+
+			// Recursively copy left and right subtrees using a lambda function or inline function, like in javascript
+            // maybe a better way to do this??
+            std::function<void(BNode*, BNode*)> tempCopyFunc = [&](BNode* src, BNode* dest) {
+				// Copy left stuff to the new node
+                if (src->pLeft)
+                {
+                    dest->pLeft = new BNode(src->pLeft->data);
+                    dest->pLeft->pParent = dest;
+                    tempCopyFunc(src->pLeft, dest->pLeft);
+                }
+
+				// Copy right stuff also to the new node
+                if (src->pRight)
+                {
+                    dest->pRight = new BNode(src->pRight->data);
+                    dest->pRight->pParent = dest;
+                    tempCopyFunc(src->pRight, dest->pRight);
+                }
+                };
+
+			// Let the O(n) copying begin
+            tempCopyFunc(rhs.root, root);
+        }
+        else
+        {
+			// If the code made it here with out crashing... awesome! then root is null
+            root = nullptr;
+        }
+    }
+    return *this;
 }
 
 /*********************************************
@@ -323,7 +355,10 @@ BST <T> & BST <T> :: operator = (const BST <T> & rhs)
 template <typename T>
 BST <T> & BST <T> :: operator = (const std::initializer_list<T>& il)
 {
-   return *this;
+    clear();
+    for (const T& item : il)
+        insert(item);
+    return *this;
 }
 
 /*********************************************
@@ -333,8 +368,17 @@ BST <T> & BST <T> :: operator = (const std::initializer_list<T>& il)
 template <typename T>
 BST <T> & BST <T> :: operator = (BST <T> && rhs)
 {
-   return *this;
+    if (this != &rhs)
+    {
+        clear();
+        root = rhs.root;
+        numElements = rhs.numElements;
+        rhs.root = nullptr;
+        rhs.numElements = 0;
+    }
+    return *this;
 }
+
 
 /*********************************************
  * BST :: SWAP
