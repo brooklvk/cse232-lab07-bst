@@ -387,7 +387,8 @@ BST <T> & BST <T> :: operator = (BST <T> && rhs)
 template <typename T>
 void BST <T> :: swap (BST <T>& rhs)
 {
-
+	std::swap(root, rhs.root);
+	std::swap(numElements, rhs.numElements);
 }
 
 /*****************************************************
