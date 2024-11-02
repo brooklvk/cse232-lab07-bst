@@ -398,56 +398,48 @@ void BST <T> :: swap (BST <T>& rhs)
  * Insert a node at a given location in the tree
  ****************************************************/
 template <typename T>
-std::pair<typename BST <T> :: iterator, bool> BST <T> :: insert(const T & t, bool keepUnique)
+std::pair<typename BST<T>::iterator, bool> BST<T>::insert(const T& t, bool keepUnique)
 {
-    std::pair<iterator, bool> pairReturn(end(), false);
+    if (!root)
+    {
+        root = new BNode(t);
+        numElements = 1;
+        return std::make_pair(iterator(root), true);
+    }
 
-        if (!root || empty())
+    BNode* currentNode = root;
+    while (currentNode)
+    {
+        if (keepUnique && t == currentNode->data)
+            return std::make_pair(iterator(currentNode), false);
+
+        if (t < currentNode->data)
         {
-            assert(numElements == 0);
-
-            root = new BNode(t);
-            numElements = 1;
-            return std::make_pair(iterator(root), true);
-        }
-        BNode* currentNode = root;
-
-        bool done = false;
-        while (!done)
-        {
-            if (keepUnique && t == currentNode->data)
-            {
-                return std::make_pair(iterator(currentNode), false);
-            }
-            if (t < currentNode->data)
-            {
-                if (currentNode->pLeft)
-                    currentNode = currentNode->pLeft;
-                else
-                {
-                    currentNode->addLeft(t);
-                    pairReturn = std::make_pair(iterator(currentNode->pLeft), true);
-                    done = true;
-                }
-            }
+            if (currentNode->pLeft)
+                currentNode = currentNode->pLeft;
             else
             {
-                if (currentNode->pRight)
-                    currentNode = currentNode->pRight;
-                else
-                {
-                    currentNode->addRight(t);
-                    pairReturn = std::make_pair(iterator(currentNode->pRight), true);
-                    done = true;
-                }
+                currentNode->pLeft = new BNode(t);
+                currentNode->pLeft->pParent = currentNode;
+                ++numElements;
+                return std::make_pair(iterator(currentNode->pLeft), true);
             }
         }
-        numElements++;
+        else
+        {
+            if (currentNode->pRight)
+                currentNode = currentNode->pRight;
+            else
+            {
+                currentNode->pRight = new BNode(t);
+                currentNode->pRight->pParent = currentNode;
+                ++numElements;
+                return std::make_pair(iterator(currentNode->pRight), true);
+            }
+        }
+    }
 
-        while (root->pParent)
-            root = root->pParent;
-
-    return pairReturn;
+	return std::make_pair(end(), false); // Should not reach here but need for compiler
 }
 
 template <typename T>
@@ -456,7 +448,7 @@ std::pair<typename BST <T> ::iterator, bool> BST <T> ::insert(T && t, bool keepU
     if (!root)
     {
         root = new BNode(std::move(t));
-        ++numElements;
+        numElements = 1;
         return std::make_pair(iterator(root), true);
     }
 
@@ -466,31 +458,22 @@ std::pair<typename BST <T> ::iterator, bool> BST <T> ::insert(T && t, bool keepU
     while (currentNode)
     {
         parentNode = currentNode;
-        if (t < currentNode->data)
-        {
-            currentNode = currentNode->pLeft;
-        }
-        else if (keepUnique && t == currentNode->data)
-        {
+        if (keepUnique && t == currentNode->data)
             return std::make_pair(iterator(currentNode), false);
-        }
+
+        if (t < currentNode->data)
+            currentNode = currentNode->pLeft;
         else
-        {
             currentNode = currentNode->pRight;
-        }
     }
 
     BNode* newNode = new BNode(std::move(t));
     newNode->pParent = parentNode;
 
     if (newNode->data < parentNode->data)
-    {
         parentNode->pLeft = newNode;
-    }
     else
-    {
         parentNode->pRight = newNode;
-    }
 
     ++numElements;
     return std::make_pair(iterator(newNode), true);
